@@ -280,6 +280,18 @@ def main():
     # 5. Clustering (KMeans)
     df_clustered, kmeans_model, metrics_kmeans = perform_clustering(df_clean, X_pca, k)
     
+    # Map Cluster Names
+    cluster_names = {
+        0: "Dance",
+        1: "Focus",
+        2: "Rock",
+        3: "Folk"
+    }
+    # Ensure cluster column is int for mapping
+    df_clustered['cluster'] = df_clustered['cluster'].astype(int)
+    df_clustered['cluster_label'] = df_clustered['cluster'].map(cluster_names)
+
+    
     # SAVE KMEANS INFO INTERMEDIATELY
     with open('clustering_metrics.json', 'w') as f:
         json.dump({"kmeans": metrics_kmeans}, f)
@@ -321,20 +333,20 @@ def main():
     
     with tab1:
         st.markdown("#### 2D Cluster Visualization (PCA)")
-        visualize_clusters_v2(X_pca, df_clustered['cluster'], 'KMeans Clusters (PCA)', 'cluster_visualization_kmeans.png')
+        visualize_clusters_v2(X_pca, df_clustered['cluster_label'], 'KMeans Clusters (PCA)', 'cluster_visualization_kmeans.png')
         
     with tab2:
         st.markdown("#### Feature Analysis")
-        plot_cluster_means_bar(df_clustered, feature_cols)
+        plot_cluster_means_bar(df_clustered, feature_cols, cluster_col='cluster_label')
         st.markdown("---")
-        plot_cluster_heatmap(df_clustered, feature_cols)
+        plot_cluster_heatmap(df_clustered, feature_cols, cluster_col='cluster_label')
         
     with tab3:
-        plot_feature_distributions(df_clustered, feature_cols)
+        plot_feature_distributions(df_clustered, feature_cols, cluster_col='cluster_label')
         
     with tab4:
         st.markdown("#### Cluster Profiling (Mean values)")
-        profile = df_clustered.groupby('cluster')[feature_cols].mean()
+        profile = df_clustered.groupby('cluster_label')[feature_cols].mean()
         st.dataframe(profile.style.highlight_max(axis=0))
         
         csv = profile.to_csv().encode('utf-8')
