@@ -1,0 +1,1 @@
+{"kmeans": {"silhouette_score": 0.9077944004720292, "davies_bouldin_score": 0.42032575239241343, "inertia": 46897409.38918133, "k": 4}}
