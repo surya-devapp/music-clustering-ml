@@ -1,0 +1,127 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Python: Current File (Integrated Terminal)",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${file}",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "justMyCode": true,
+      "envFile": "${workspaceFolder}/.env"
+    },
+    {
+      "name": "check_cluster_counts",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/check_cluster_counts.py",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "justMyCode": true,
+      "envFile": "${workspaceFolder}/.env"
+    },
+    {
+      "name": "check_shape",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/check_shape.py",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "justMyCode": true,
+      "envFile": "${workspaceFolder}/.env"
+    },
+    {
+      "name": "check_skewness",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/check_skewness.py",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "justMyCode": true,
+      "envFile": "${workspaceFolder}/.env"
+    },
+    {
+      "name": "Streamlit: Run clustering_model.py",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "streamlit",
+      "args": [
+        "run",
+        "${workspaceFolder}/clustering_model.py",
+        "--server.port=8501",
+        "--server.headless=true"
+      ],
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "PYTHONUNBUFFERED": "1"
+      }
+    },
+    {
+      "name": "Streamlit: Run gmm_clustering.py",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "streamlit",
+      "args": [
+        "run",
+        "${workspaceFolder}/gmm_clustering.py",
+        "--server.port=8502",
+        "--server.headless=true"
+      ],
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "PYTHONUNBUFFERED": "1"
+      }
+    },
+    {
+      "name": "clustering_model",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/clustering_model.py",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "justMyCode": true,
+      "envFile": "${workspaceFolder}/.env"
+    },
+    {
+      "name": "generate_report_assets",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/generate_report_assets.py",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "justMyCode": true,
+      "envFile": "${workspaceFolder}/.env"
+    },
+    {
+      "name": "read_doc",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/read_doc.py",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "justMyCode": true,
+      "envFile": "${workspaceFolder}/.env"
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Run all checks",
+      "configurations": [
+        "check_shape",
+        "check_skewness",
+        "check_cluster_counts"
+      ]
+    },
+    {
+      "name": "Run full pipeline",
+      "configurations": [
+        "clustering_model",
+        "generate_report_assets",
+        "read_doc"
+      ]
+    }
+  ]
+}

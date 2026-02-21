@@ -1,43 +1,56 @@
-# Amazon Music Clustering App
+# Amazon Music Clustering Analysis Dashboard
 
-This project implements an unsupervised learning model to categorize music tracks using K-Means clustering. It features an interactive Streamlit dashboard for visualizing clusters, analyzing feature distributions, and profiling music segments.
+An interactive unsupervised machine learning application to categorize music tracks based on audio features. This project leverages K-Means clustering to distinguish between various music segments such as "Dance", "Focus", "Rock", and "Folk".
 
-## Prerequisites
+## 🚀 Key Features
 
-- Python 3.8 or higher
+### 1. Intelligent Preprocessing
+- **Log Transformation**: Corrects skewed features (`speechiness`, `liveness`, `instrumentalness`, `duration_ms`) for better model performance.
+- **Robust Scaling**: Handles outliers using Interquartile Range (IQR) to ensure stable distance calculations.
+- **PCA Dimensionality Reduction**: Reduces 10 audio features into 2 principal components for noise reduction and visualization.
 
-## Installation
+### 2. Model Optimization
+- **Automated K-Selection**: Interactive **Elbow Method** and **Silhouette Analysis** help determine the mathematically optimal number of clusters.
+- **K-Means Clustering**: Core algorithm used to assign songs to distinct groups.
 
-1.  **Clone or Download** this repository to your local machine.
-2.  **Install the required Python packages**. You can install them directly using pip:
+### 3. Interactive Insights Dashboard
+- **2D Cluster Visualization**: Explorable PCA scatter plot.
+- **Feature Analysis**: 
+  - **Mean Bar Charts**: Compare characteristics across clusters.
+  - **Correlation Heatmaps**: Understand relationships between audio features.
+- **Data Profiles**: Detailed statistical summary for each cluster.
+- **Cluster Insights Tab**:
+  - **Top Tracks**: Identify the 5 most representative songs (closest to centroid) for each cluster.
+  - **Summary Report**: Auto-generated text descriptions of each cluster's unique traits.
 
+### 4. Data & Model Export
+- **Export Clustered Data**: Download the full dataset with assigned labels as a CSV.
+- **Export Model**: Save the trained KMeans model as a `.pkl` file for future inference.
+- **Export Summary**: Download the textual cluster characteristics as a `.txt` report.
+
+## 🛠️ Installation & Setup
+
+1.  **Clone the Repository**:
     ```bash
-    pip install pandas numpy matplotlib seaborn plotly scikit-learn streamlit
+    git clone [repository-url]
+    cd music-clustering-ml
     ```
 
-## How to Run
+2.  **Install Dependencies**:
+    You can install all necessary packages using the provided `requirements.txt` file:
+    ```bash
+    pip install -r requirements.txt
+    ```
 
-To start the dashboard, verify you are in the project directory (e.g., `d:\Clustering`) and run:
+3.  **Run the Application**:
+    ```bash
+    # For the main Clustering Dashboard:
+    python -m streamlit run clustering_model.py
+    ```
 
-```bash
-python -m streamlit run clustering_model.py
-```
+## 📊 Datasets
+The application dynamically loads the artist audio features from a cloud-hosted dataset containing features like danceability, energy, tempo, and more.
 
-*Alternatively, you can use `streamlit run clustering_model.py`.*
-
-## Application Features
-
-The `clustering_model.py` script performs the full pipeline:
-1.  **Data Loading**: Fetches dataset from the source.
-2.  **Preprocessing**: Cleans data, handles missing values, and scales features.
-3.  **Clustering**: Applies K-Means clustering to categorize songs.
-4.  **Visualization**:
-    *   **2D Scatter Plot**: PCA-reduced visualization of song clusters.
-    *   **Feature Analysis**: Bar charts and heatmaps showing average feature values per cluster.
-    *   **Distributions**: Interactive histograms and boxplots for all audio features.
-    *   **Data Profile**: Detailed statistics and "Download" options for cluster profiles.
-
-## Troubleshooting
-
--   If the app does not open automatically, copy the "Local URL" (e.g., `http://localhost:8501`) shown in the terminal and paste it into your browser.
--   **CSV Permissions**: Ensure the script has write permissions in the folder to save `clustered_songs.csv` and intermediate files.
+## 📝 Troubleshooting
+- **Port Issues**: If the local URL does not load, verify that port `8501` is open or check the terminal output for the correct address.
+- **Permissions**: Ensure write access to the project directory for saving results and intermediate files.
