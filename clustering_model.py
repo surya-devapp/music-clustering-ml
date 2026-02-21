@@ -12,6 +12,8 @@ from sklearn.metrics import silhouette_score, davies_bouldin_score
 from sklearn.neighbors import KNeighborsClassifier
 import os
 import streamlit as st
+import joblib
+import io
 
 import json
 # Set aesthetic style
@@ -48,11 +50,7 @@ def preprocess_data(df):
 
     # Handle missing values - drop rows with missing values in feature columns
     df_clean = df.dropna(subset=feature_cols).copy()
-    
-    # Remove Outliers using IQR (Relaxed or Removed)
-    # Previous attempts with 1.5 IQR reduced dataset too much and lowered score.
-    # We will skip strict outlier removal or use a very loose bound if needed.
-    
+     
     # Log Transform Skewed Features
     # This often improves clustering on audio data which follows power laws
     skewed_features = ['speechiness', 'liveness', 'instrumentalness', 'duration_ms']
@@ -251,6 +249,113 @@ def plot_feature_distributions(df, feature_cols, cluster_col='cluster'):
         if len(features_to_plot) > 1:
             st.markdown("---")
 
+def plot_cluster_sizes(df, cluster_col='cluster'):
+    st.subheader("Cluster Size Distribution")
+    counts = df[cluster_col].value_counts().reset_index()
+    counts.columns = [cluster_col, 'Count']
+    counts['Percentage'] = (counts['Count'] / len(df)) * 100
+    
+    # Ensure categorical string for plotly
+    counts[cluster_col] = counts[cluster_col].astype(str)
+
+    fig = px.bar(counts, x=cluster_col, y='Count', color=cluster_col,
+                 title="Number of Songs per Cluster", text='Count',
+                 template='plotly_white',
+                 hover_data={'Percentage':':.1f'})
+    fig.update_traces(textposition='outside')
+    st.plotly_chart(fig, use_container_width=True)
+    
+    st.markdown("**Cluster Distribution Table**")
+    st.dataframe(counts.style.format({'Percentage': '{:.2f}%'}))
+
+def show_top_tracks(df, X_features, kmeans_model, feature_cols, cluster_col='cluster_label'):
+    st.subheader("🎵 Representative Tracks per Cluster")
+    st.markdown("These are the songs closest to the center (centroid) of each cluster.")
+    
+    # Get distances to cluster centers
+    # transform returns distance to all centers. We need distance to the assigned center.
+    distances = kmeans_model.transform(X_features)
+    
+    # Create a copy to avoid SettingWithCopy warnings
+    df_with_dist = df.copy()
+    
+    # Identify display columns (text columns for song/artist name)
+    # Common variations: track_name/artist_name, track/artist, sng_title/art_name
+    text_cols = df.select_dtypes(include=['object']).columns.tolist()
+    display_cols = []
+    
+    # Prioritize 'track' and 'artist' in names
+    priority_terms = ['track', 'song', 'title', 'name', 'artist']
+    for term in priority_terms:
+        matches = [col for col in text_cols if term in col.lower()]
+        for match in matches:
+            if match not in display_cols:
+                display_cols.append(match)
+    
+    # If no priority cols found, take first 2 object cols
+    if not display_cols:
+        display_cols = text_cols[:2]
+        
+    # If still empty (no text cols), just use index
+    if not display_cols:
+        # No text columns found
+        pass
+
+    # Add distance to own cluster center
+    # distance to assigned cluster is distances[i, label[i]]
+    assigned_clusters = kmeans_model.labels_
+    df_with_dist['distance_to_center'] = [distances[i, c] for i, c in enumerate(assigned_clusters)]
+    
+    unique_clusters = sorted(df_with_dist[cluster_col].unique())
+    
+    for cluster in unique_clusters:
+        st.markdown(f"#### Cluster: {cluster}")
+        # Get top 5 closest
+        top_tracks = df_with_dist[df_with_dist[cluster_col] == cluster].nsmallest(5, 'distance_to_center')
+        
+        # Display relevant columns
+        cols_to_show = display_cols + feature_cols[:3] # Show first 3 features for context
+        # Ensure cols exist
+        cols_to_show = [c for c in cols_to_show if c in df_with_dist.columns]
+        st.dataframe(top_tracks[cols_to_show], hide_index=True)
+
+def generate_cluster_summary(df, feature_cols, cluster_col='cluster_label'):
+    st.subheader("📝 Cluster Characteristics Summary")
+    
+    means = df.groupby(cluster_col)[feature_cols].mean()
+    overall_means = df[feature_cols].mean()
+    
+    summary_text = "Cluster Summary Report\n========================\n\n"
+    
+    unique_clusters = sorted(df[cluster_col].unique())
+    
+    for cluster in unique_clusters:
+        st.markdown(f"**{cluster}**")
+        cluster_means = means.loc[cluster]
+        
+        characteristics = []
+        for feature in feature_cols:
+            diff = (cluster_means[feature] - overall_means[feature]) / overall_means[feature]
+            
+            if diff > 0.2:
+                characteristics.append(f"High {feature} (+{diff:.0%})")
+            elif diff < -0.2:
+                characteristics.append(f"Low {feature} ({diff:.0%})")
+        
+        desc = ", ".join(characteristics) if characteristics else "Average characteristics"
+        st.write(f"- {desc}")
+        
+        summary_text += f"Cluster: {cluster}\n"
+        summary_text += f"Characteristics: {desc}\n"
+        summary_text += "-" * 30 + "\n"
+
+    st.download_button(
+        label="Download Summary Report",
+        data=summary_text,
+        file_name="cluster_summary_report.txt",
+        mime="text/plain"
+    )
+
 def main():
     st.set_page_config(layout="wide", page_title="Amazon Music Clustering Analysis")
     st.title("🎵 Amazon Music Clustering Analysis")
@@ -273,9 +378,11 @@ def main():
 
     # 4. Find Optimal K (using PCA features)
     k = 4
-    if st.checkbox("Find Optimal K", value=False):
-        # Placeholder for K finding logic if needed
-        st.info("K finding logic skipped for speed.")
+    if st.checkbox("Find Optimal K (Elbow Method)", value=False):
+        st.write("Calculating optimal K... this may take a moment.")
+        # Use PCA features for finding K as we cluster on them
+        k = find_optimal_k(X_pca, max_k=10)
+        st.success(f"Optimal K determined: {k}")
     
     # 5. Clustering (KMeans)
     df_clustered, kmeans_model, metrics_kmeans = perform_clustering(df_clean, X_pca, k)
@@ -328,8 +435,10 @@ def main():
 
     st.markdown("---")
     
+    st.markdown("---")
+    
     # VISUALIZATIONS TABS
-    tab1, tab2, tab3, tab4 = st.tabs(["2D Scatter", "Feature Analysis", "Distributions", "Data Profile"])
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(["2D Scatter", "Feature Analysis", "Distributions", "Data Profile", "Cluster Insights"])
     
     with tab1:
         st.markdown("#### 2D Cluster Visualization (PCA)")
@@ -345,6 +454,9 @@ def main():
         plot_feature_distributions(df_clustered, feature_cols, cluster_col='cluster_label')
         
     with tab4:
+        st.markdown("#### Cluster Size Balance")
+        plot_cluster_sizes(df_clustered, cluster_col='cluster_label')
+        st.markdown("---")
         st.markdown("#### Cluster Profiling (Mean values)")
         profile = df_clustered.groupby('cluster_label')[feature_cols].mean()
         st.dataframe(profile.style.highlight_max(axis=0))
@@ -357,10 +469,40 @@ def main():
             "text/csv",
             key='download-profile'
         )
+
+    with tab5:
+        show_top_tracks(df_clustered, X_pca, kmeans_model, feature_cols, cluster_col='cluster_label')
+        st.markdown("---")
+        generate_cluster_summary(df_clustered, feature_cols, cluster_col='cluster_label')
         
     # 8. Save
     save_results(df_clustered)
     print("Cluster profile saved to cluster_profile.csv")
+
+    st.markdown("### 📥 Download Results")
+    col_dl1, col_dl2 = st.columns(2)
+    
+    with col_dl1:
+        # CSV Download
+        csv_full = df_clustered.to_csv(index=False).encode('utf-8')
+        st.download_button(
+            label="Download Full Clustered Data (CSV)",
+            data=csv_full,
+            file_name="clustered_songs_full.csv",
+            mime="text/csv"
+        )
+        
+    with col_dl2:
+        # Model Download
+        buffer = io.BytesIO()
+        joblib.dump(kmeans_model, buffer)
+        buffer.seek(0)
+        st.download_button(
+            label="Download Trained KMeans Model (.pkl)",
+            data=buffer,
+            file_name="kmeans_model.pkl",
+            mime="application/octet-stream"
+        )
 
 if __name__ == "__main__":
     main()
